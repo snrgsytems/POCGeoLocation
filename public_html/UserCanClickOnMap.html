@@ -1,0 +1,176 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=iso-8859-1"/>
+<style>
+html,body {
+	margin: 0px;
+	width: 100%;
+	height: 100%;
+}
+</style>
+
+<title>Google Maps JavaScript API v3 - Elevation Example - (by Marcelo)</title>
+<script src="http://maps.google.com/maps/api/js?sensor=false"></script>
+
+<script type="text/javascript">
+
+var G = google.maps;         
+var zoom = 10;
+var lat = -34 //document.getElementById("lat").value;
+var lon = 45 //document.getElementById("lon").value;
+var centerPoint = new G.LatLng(lat,lon );
+var container;
+var map;
+var elevator;
+
+//-------------------------     
+
+function load() {
+	loadMap();
+	simulateClick();
+	//Facebook and Twitter buttons
+	if (typeof shareBox == 'function') {
+		shareBox();
+	}
+}
+
+function loadMap() {
+    navigator.geolocation.getCurrentPosition(function(position) {
+            startPos = position;
+            document.getElementById("lat").value = startPos.coords.latitude;
+            document.getElementById("lon").value = startPos.coords.longitude;
+
+          });
+	container = document.getElementById('mapDiv');
+	var myOptions = {
+		zoom: zoom,
+		center: centerPoint,
+		draggableCursor: 'crosshair',
+		mapTypeId: G.MapTypeId.ROADMAP,
+                scaleControl:true
+	}
+	map = new G.Map(container, myOptions);
+
+  elevator = new G.ElevationService();
+  G.event.addListener(map, 'click', getElevation);
+
+	//var statusBarContainer = document.getElementById('statusDiv');
+	//var statusbar = new MStatusBar({map:map,parent:statusBarContainer});
+
+}
+
+function simulateClick(){
+	var oLat = document.getElementById('lat');
+	var oLon = document.getElementById('lon');
+	var latlon = new google.maps.LatLng(parseFloat(oLat.value), parseFloat(oLon.value));
+
+	mev = {
+	  stop: null,
+	  latLng:latlon
+	};
+	map.panTo(latlon);
+	google.maps.event.trigger(map, 'click', mev);
+
+}
+function getElevation(mev) {
+	var positionalRequest = {
+		'locations': [mev.latLng]
+	};
+	setMarker(mev.latLng);
+
+	elevator.getElevationForLocations(positionalRequest, function(results, status) {
+		if (status === G.ElevationStatus.OK) {
+			if (results[0]) {
+				var label = new MLabel(mev.latLng, parseInt(results[0].elevation)+ ' meters<br>'+ 
+                                        mev.latLng.lat().toFixed(4)+ ', '+ mev.latLng.lng().toFixed(4) + '</br>', map);
+			}
+			else {
+				alert("No results found");
+			}
+		}
+		else {
+			alert("Elevation service failed due to: " + status);
+		}
+	});
+}
+
+
+
+function setMarker(latlon){
+	var marker = new G.Marker({
+		position: latlon,
+		map:map
+	});
+}
+
+
+MLabel.prototype = new G.OverlayView();
+
+function MLabel(latlon, html, map) {
+	this.latlon = latlon;
+	this.html = html;
+	this.map = map;
+	this.div = null;
+	this.setMap(map);
+}
+
+MLabel.prototype.onAdd = function() {
+	var div = document.createElement('DIV');
+	div.style.border = '1px solid gray';
+	div.style.borderTop = '2px solid red';
+	div.style.borderLeft = '2px solid red';
+	div.style.position = 'absolute';
+	div.style.textAlign = 'center';
+	div.style.background = '#ffffff';
+	div.style.padding = '1px';
+	div.style.font = 'normal 10px verdana';
+	this.div = div;
+
+	var panes = this.getPanes();
+	panes.overlayImage.appendChild(div);
+}
+
+MLabel.prototype.draw = function() {
+	var overlayProjection = this.getProjection();
+	var px = overlayProjection.fromLatLngToDivPixel(this.latlon);
+
+	var div = this.div;
+	div.style.left = px.x + 'px';
+	div.style.top = px.y + 'px';
+	div.style.width =  140 + 'px';
+	div.innerHTML = this.html;
+}
+
+MLabel.prototype.onRemove = function() {
+	this.div.parentNode.removeChild(this.div);
+	this.div = null;
+}
+window.onload = load;
+</script>
+</head>
+<body>	
+<center>
+<table cellspacing="0" cellpadding="2">
+<tr>
+	<td valign="top">
+		<div id="mapDiv" style="width: 1000px; height: 600px;"></div>
+		<div id="statusDiv" style="font: normal 10px verdana"></div>
+	</td>
+		<td valign="top">
+		<div style="border: 1px solid black; width:250px">
+		<center>
+		<h3>Simulate map click</h3>
+		Lat: <input id="lat" value="-34"/><br>
+		Lon: <input id="lon" value="45"/></br>
+                <input type="button" value="Click" onclick="simulateClick()"/><br></br>
+		
+		</center>
+		</div>
+	</td>
+</tr>
+</table>
+</center>
+</body>
+</html>
